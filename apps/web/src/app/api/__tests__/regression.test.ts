@@ -75,7 +75,7 @@ async function makeReadingBody(privKey: Uint8Array, overrides: Record<string, un
 function makeReadingRequest(body: unknown) {
   return {
     json: () => Promise.resolve(body),
-    headers: { get: (_: string) => null },
+    headers: { get: (key: string) => key === 'x-api-key' ? 'mk_test_api_key' : null },
     nextUrl: { searchParams: new URLSearchParams() },
   } as unknown as Parameters<typeof postReading>[0]
 }
@@ -274,6 +274,7 @@ describe('regression issue_49: Stellar account existence check before minting', 
       id: METER_ID,
       pubkey_hex: pubKeyHex,
       cooperative_id: 'coop-1',
+      api_key: 'mk_test_api_key',
       cooperatives: { admin_address: 'GADMIN123' },
     })
 
@@ -290,6 +291,7 @@ describe('regression issue_49: Stellar account existence check before minting', 
       id: METER_ID,
       pubkey_hex: pubKeyHex,
       cooperative_id: 'coop-1',
+      api_key: 'mk_test_api_key',
       cooperatives: { admin_address: 'GNONEXISTENT' },
     })
 
@@ -314,6 +316,7 @@ describe('regression issue_49: Stellar account existence check before minting', 
       id: METER_ID,
       pubkey_hex: pubKeyHex,
       cooperative_id: 'coop-1',
+      api_key: 'mk_test_api_key',
       cooperatives: { admin_address: 'GNOTRUSTED' },
     })
 
@@ -335,6 +338,7 @@ describe('regression issue_49: Stellar account existence check before minting', 
       id: METER_ID,
       pubkey_hex: pubKeyHex,
       cooperative_id: 'coop-1',
+      api_key: 'mk_test_api_key',
       cooperatives: null, // no admin address
     })
 
@@ -357,6 +361,7 @@ describe('regression issue_73: reading deduplication at API layer', () => {
       id: METER_ID,
       pubkey_hex: pubKeyHex,
       cooperative_id: 'coop-1',
+      api_key: 'mk_test_api_key',
       cooperatives: { admin_address: 'GADMIN123' },
     })
 
@@ -379,6 +384,7 @@ describe('regression issue_73: reading deduplication at API layer', () => {
       id: METER_ID,
       pubkey_hex: pubKeyHex,
       cooperative_id: 'coop-1',
+      api_key: 'mk_test_api_key',
       cooperatives: { admin_address: 'GADMIN123' },
     })
 
@@ -401,6 +407,7 @@ describe('regression issue_73: reading deduplication at API layer', () => {
       id: METER_ID,
       pubkey_hex: pubKeyHex,
       cooperative_id: 'coop-1',
+      api_key: 'mk_test_api_key',
       cooperatives: { admin_address: 'GADMIN123' },
     })
 
@@ -418,6 +425,7 @@ describe('regression issue_73: reading deduplication at API layer', () => {
       id: METER_ID,
       pubkey_hex: pubKeyHex,
       cooperative_id: 'coop-1',
+      api_key: 'mk_test_api_key',
       cooperatives: { admin_address: 'GADMIN123' },
     })
 

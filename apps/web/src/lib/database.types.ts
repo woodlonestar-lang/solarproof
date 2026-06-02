@@ -13,9 +13,10 @@ export interface Database {
         Row: {
           id: string; cooperative_id: string; serial_number: string
           name: string; pubkey_hex: string; active: boolean; created_at: string
+          api_key: string
         }
-        Insert: { cooperative_id: string; serial_number: string; name: string; pubkey_hex: string; active: boolean }
-        Update: Partial<{ cooperative_id: string; serial_number: string; name: string; pubkey_hex: string; active: boolean }>
+        Insert: { cooperative_id: string; serial_number: string; name: string; pubkey_hex: string; active: boolean; api_key?: string }
+        Update: Partial<{ cooperative_id: string; serial_number: string; name: string; pubkey_hex: string; active: boolean; api_key: string }>
         Relationships: []
       }
       readings: {

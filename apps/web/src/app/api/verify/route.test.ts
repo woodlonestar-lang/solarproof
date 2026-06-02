@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server'
 
 // Mock Supabase and cache before importing the route
 vi.mock('@/lib/supabase', () => ({
+  createAnonClient: vi.fn(),
   createServiceClient: vi.fn(),
 }))
 vi.mock('@/lib/cache', () => ({
@@ -11,7 +12,7 @@ vi.mock('@/lib/cache', () => ({
 }))
 
 import { GET } from '@/app/api/verify/route'
-import { createServiceClient } from '@/lib/supabase'
+import { createAnonClient } from '@/lib/supabase'
 import { getCachedCert } from '@/lib/cache'
 
 const VALID_UUID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
@@ -51,7 +52,7 @@ describe('GET /api/verify', () => {
 
   it('returns 404 when certificate not found', async () => {
     const from = makeDb(null, null)
-    vi.mocked(createServiceClient).mockReturnValue({ from } as never)
+    vi.mocked(createAnonClient).mockReturnValue({ from } as never)
     const res = await GET(makeRequest(VALID_UUID))
     expect(res.status).toBe(404)
   })
@@ -76,7 +77,7 @@ describe('GET /api/verify', () => {
       timestamp: '2026-01-01T00:00:00Z',
     }
     const from = makeDb(cert, reading)
-    vi.mocked(createServiceClient).mockReturnValue({ from } as never)
+    vi.mocked(createAnonClient).mockReturnValue({ from } as never)
     const res = await GET(makeRequest(VALID_UUID))
     expect(res.status).toBe(200)
     const body = await res.json()
@@ -96,7 +97,7 @@ describe('GET /api/verify', () => {
 
   it('accepts a 64-char hex hash as id', async () => {
     const from = makeDb(null, null)
-    vi.mocked(createServiceClient).mockReturnValue({ from } as never)
+    vi.mocked(createAnonClient).mockReturnValue({ from } as never)
     const res = await GET(makeRequest(VALID_HASH))
     expect(res.status).toBe(404)
   })

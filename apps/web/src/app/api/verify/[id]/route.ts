@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase'
+import { createAnonClient } from '@/lib/supabase'
 import { getCachedCert, setCachedCert } from '@/lib/cache'
 
 /**
@@ -33,7 +33,7 @@ export async function GET(
     })
   }
 
-  const db = createServiceClient()
+  const db = createAnonClient()
   let cert = null
   for (const column of ['id', 'reading_hash', 'mint_tx_hash'] as const) {
     const { data } = await db.from('certificates').select('*').eq(column, id).maybeSingle()

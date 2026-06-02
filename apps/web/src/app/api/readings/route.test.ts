@@ -60,10 +60,10 @@ async function makeBody(privKey: Uint8Array, overrides: Record<string, unknown> 
 }
 
 /** Build a NextRequest-like object from a plain body. */
-function makeRequest(body: unknown) {
+function makeRequest(body: unknown, apiKey = 'mk_test_api_key') {
   return {
     json: () => Promise.resolve(body),
-    headers: { get: (_: string) => null },
+    headers: { get: (key: string) => key === 'x-api-key' ? apiKey : null },
   } as unknown as Parameters<typeof POST>[0]
 }
 
@@ -160,7 +160,7 @@ describe('POST /api/readings', () => {
   it('returns 401 when signature is signed by a different key', async () => {
     const { pubKeyHex } = await makeKeypair()
     const { privKey: wrongPrivKey } = await makeKeypair()
-    mockDb({ id: METER_ID, pubkey_hex: pubKeyHex, cooperative_id: 'coop-1', cooperatives: { admin_address: 'GADMIN' } })
+    mockDb({ id: METER_ID, pubkey_hex: pubKeyHex, cooperative_id: 'coop-1', api_key: 'mk_test_api_key', cooperatives: { admin_address: 'GADMIN' } })
     const body = await makeBody(wrongPrivKey) // signed with wrong key
     const res = await POST(makeRequest(body))
     expect(res.status).toBe(401)
@@ -170,7 +170,7 @@ describe('POST /api/readings', () => {
 
   it('returns 401 when signature_hex is all zeros (invalid)', async () => {
     const { pubKeyHex } = await makeKeypair()
-    mockDb({ id: METER_ID, pubkey_hex: pubKeyHex, cooperative_id: 'coop-1', cooperatives: { admin_address: 'GADMIN' } })
+    mockDb({ id: METER_ID, pubkey_hex: pubKeyHex, cooperative_id: 'coop-1', api_key: 'mk_test_api_key', cooperatives: { admin_address: 'GADMIN' } })
     const body = { meter_id: METER_ID, kwh: KWH, timestamp: Math.floor(Date.now() / 1000), signature_hex: '0'.repeat(128), nonce: 'test_nonce_123' }
     const res = await POST(makeRequest(body))
     expect(res.status).toBe(401)
@@ -180,7 +180,7 @@ describe('POST /api/readings', () => {
 
   it('returns 201 and anchors when signature is valid', async () => {
     const { privKey, pubKeyHex } = await makeKeypair()
-    mockDb({ id: METER_ID, pubkey_hex: pubKeyHex, cooperative_id: 'coop-1', cooperatives: { admin_address: 'GADMIN' } })
+    mockDb({ id: METER_ID, pubkey_hex: pubKeyHex, cooperative_id: 'coop-1', api_key: 'mk_test_api_key', cooperatives: { admin_address: 'GADMIN' } })
     const body = await makeBody(privKey)
     const res = await POST(makeRequest(body))
     expect(res.status).toBe(201)
@@ -192,7 +192,7 @@ describe('POST /api/readings', () => {
 
   it('calls anchorReading with the correct hash for a valid reading', async () => {
     const { privKey, pubKeyHex } = await makeKeypair()
-    mockDb({ id: METER_ID, pubkey_hex: pubKeyHex, cooperative_id: 'coop-1', cooperatives: { admin_address: 'GADMIN' } })
+    mockDb({ id: METER_ID, pubkey_hex: pubKeyHex, cooperative_id: 'coop-1', api_key: 'mk_test_api_key', cooperatives: { admin_address: 'GADMIN' } })
     const body = await makeBody(privKey)
 
     const { anchorReading } = await import('@/lib/stellar')
@@ -202,5 +202,27 @@ describe('POST /api/readings', () => {
     const callArg = vi.mocked(anchorReading).mock.calls[0][0]
     const expectedHash = computeReadingHash(METER_ID, kwhToStroops(KWH), BigInt(body.timestamp))
     expect(Buffer.from(callArg.readingHash).toString('hex')).toBe(expectedHash.toString('hex'))
+  })
+
+  // ── API key validation ─────────────────────────────────────────────────────
+
+  it('returns 401 when x-api-key header is missing', async () => {
+    const { privKey, pubKeyHex } = await makeKeypair()
+    mockDb({ id: METER_ID, pubkey_hex: pubKeyHex, cooperative_id: 'coop-1', api_key: 'mk_test_api_key', cooperatives: { admin_address: 'GADMIN' } })
+    const body = await makeBody(privKey)
+    const res = await POST(makeRequest(body, null as unknown as string))
+    expect(res.status).toBe(401)
+    const json = await res.json()
+    expect(json.error).toMatch(/api key/i)
+  })
+
+  it('returns 401 when x-api-key is wrong', async () => {
+    const { privKey, pubKeyHex } = await makeKeypair()
+    mockDb({ id: METER_ID, pubkey_hex: pubKeyHex, cooperative_id: 'coop-1', api_key: 'mk_test_api_key', cooperatives: { admin_address: 'GADMIN' } })
+    const body = await makeBody(privKey)
+    const res = await POST(makeRequest(body, 'mk_wrong_key'))
+    expect(res.status).toBe(401)
+    const json = await res.json()
+    expect(json.error).toMatch(/api key/i)
   })
 })

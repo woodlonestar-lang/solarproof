@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createServiceClient } from '@/lib/supabase'
+import { createAnonClient } from '@/lib/supabase'
 import { getCachedCert, setCachedCert } from '@/lib/cache'
 import { stellarExplorerUrl, type NetworkName } from '@solarproof/stellar'
 import { env } from '@/env'
@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
 
   // Try certificate ID first, then reading_hash, then mint_tx_hash
   // Use separate parameterised filters instead of raw .or() interpolation
-  const db = createServiceClient()
+  const db = createAnonClient()
   let cert = null
   for (const column of ['id', 'reading_hash', 'mint_tx_hash'] as const) {
     const { data } = await db.from('certificates').select('*').eq(column, id).maybeSingle()
