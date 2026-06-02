@@ -23,6 +23,9 @@ vi.mock('@/lib/cache', () => ({
   invalidateCert: vi.fn().mockResolvedValue(undefined),
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfter: 0 }),
 }))
+vi.mock('@/lib/meter-api-keys', () => ({
+  validateApiKey: vi.fn().mockResolvedValue({ meter_id: '123e4567-e89b-12d3-a456-426614174000' }),
+}))
 import { createServiceClient } from '@/lib/supabase'
 import { POST } from '@/app/api/readings/route'
 
@@ -63,7 +66,7 @@ async function makeBody(privKey: Uint8Array, overrides: Record<string, unknown> 
 function makeRequest(body: unknown) {
   return {
     json: () => Promise.resolve(body),
-    headers: { get: (_: string) => null },
+    headers: { get: (key: string) => key === 'x-meter-api-key' ? 'sp_mk_testhdr' : null },
   } as unknown as Parameters<typeof POST>[0]
 }
 

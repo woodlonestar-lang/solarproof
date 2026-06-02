@@ -4,6 +4,7 @@ import { createServiceClient } from '@/lib/supabase'
 import { retireCertificate } from '@/lib/stellar'
 import { fireWebhook } from '@/lib/webhooks'
 import { triggerIRecRetirement } from '@/lib/irec-bridge'
+import { sendNotification } from '@/lib/email'
 
 const RetireSchema = z.object({
   wallet_address: z.string().min(1),
@@ -81,6 +82,7 @@ export async function POST(
     retired_by: updated.retired_by,
     retire_tx_hash: retireTxHash,
   })
+  void sendNotification({ cooperative_id: updated.cooperative_id, event: 'retired', data: { certificate_id: updated.id, retired_by: updated.retired_by, retire_tx_hash: retireTxHash } })
 
   // Level 3 integration: Bridge retirement to I-REC registry
   void triggerIRecRetirement({

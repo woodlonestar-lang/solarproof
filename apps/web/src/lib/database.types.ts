@@ -70,6 +70,20 @@ export interface Database {
         }>
         Relationships: []
       }
+      meter_api_keys: {
+        Row: {
+          id: string; meter_id: string; key_hash: string; hint: string
+          active: boolean; created_at: string
+          rotated_at: string | null; revoked_at: string | null
+        }
+        Insert: {
+          meter_id: string; key_hash: string; hint: string; active: boolean
+        }
+        Update: Partial<{
+          active: boolean; rotated_at: string; revoked_at: string
+        }>
+        Relationships: []
+      }
       webhook_endpoints: {
         Row: {
           id: string; cooperative_id: string; url: string; secret: string

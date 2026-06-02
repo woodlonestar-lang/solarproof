@@ -10,6 +10,8 @@ import { fireWebhook } from '@/lib/webhooks'
 import { logger } from '@/lib/logger'
 import { requireAuth, isAuthError } from '@/lib/auth'
 import { diagnoseMintFailure } from '@/lib/tracer-sim'
+import { validateApiKey } from '@/lib/meter-api-keys'
+import { sendNotification } from '@/lib/email'
 
 const MAX_PAGE_SIZE = 100
 
@@ -113,6 +115,19 @@ export async function POST(req: NextRequest) {
   }
 
   const { meter_id, kwh, timestamp, signature_hex } = parsed.data
+
+  // Validate API key — must match the meter being claimed
+  const apiKeyHeader = req.headers.get('x-meter-api-key')
+  if (!apiKeyHeader) {
+    log.warn('readings.post.missing_api_key', { meter_id })
+    return NextResponse.json({ error: 'Missing X-Meter-Api-Key header' }, { status: 401 })
+  }
+  const keyRecord = await validateApiKey(apiKeyHeader)
+  if (!keyRecord || keyRecord.meter_id !== meter_id) {
+    log.warn('readings.post.invalid_api_key', { meter_id })
+    return NextResponse.json({ error: 'Invalid or revoked API key' }, { status: 401 })
+  }
+
   const limit = Number(process.env.READINGS_RATE_LIMIT_PER_MINUTE ?? 60)
   const windowSeconds = Number(process.env.READINGS_RATE_LIMIT_WINDOW_SECONDS ?? 60)
   const rateKey = `rate:readings:${meter_id}`
@@ -259,6 +274,7 @@ export async function POST(req: NextRequest) {
 
     log.info('readings.post.minted', { reading_id: reading.id, mint_tx_hash: mintTxHash, kwh })
     void fireWebhook(meter.cooperative_id, 'mint', { reading_id: reading.id, mint_tx_hash: mintTxHash, kwh })
+    void sendNotification({ cooperative_id: meter.cooperative_id, event: 'minted', data: { reading_id: reading.id, mint_tx_hash: mintTxHash, kwh } })
 
     const responseBody = { reading_id: reading.id, anchor_tx_hash: anchorTxHash, mint_tx_hash: mintTxHash }
     if (idempotencyKey) {
@@ -269,6 +285,7 @@ export async function POST(req: NextRequest) {
     const message = err instanceof Error ? err.message : 'Mint failed'
     log.error('readings.post.mint_failed', { reading_id: reading.id, error: message })
     const diagnosis = await diagnoseMintFailure(reading.id, meter.cooperative_id, message)
+    void sendNotification({ cooperative_id: meter.cooperative_id, event: 'mint_failed', data: { reading_id: reading.id, error: message } })
     return NextResponse.json({ error: message, reading_id: reading.id, anchor_tx_hash: anchorTxHash, diagnosis }, { status: 500 })
   }
 }
