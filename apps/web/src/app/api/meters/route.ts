@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createServiceClient } from '@/lib/supabase'
 import { requireAuth, isAuthError } from '@/lib/auth'
+import { issueApiKey } from '@/lib/meter-api-keys'
 
 const RegisterSchema = z.object({
   name: z.string().min(1).max(128),
@@ -56,5 +57,9 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data, { status: 201 })
+
+  // Issue an API key for the newly registered meter (shown once — store it safely)
+  const apiKey = await issueApiKey(data.id)
+
+  return NextResponse.json({ ...data, api_key: apiKey }, { status: 201 })
 }

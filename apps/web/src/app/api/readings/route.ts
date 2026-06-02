@@ -10,6 +10,7 @@ import { fireWebhook } from '@/lib/webhooks'
 import { logger } from '@/lib/logger'
 import { requireAuth, isAuthError } from '@/lib/auth'
 import { diagnoseMintFailure } from '@/lib/tracer-sim'
+import { validateApiKey } from '@/lib/meter-api-keys'
 
 const MAX_PAGE_SIZE = 100
 
@@ -113,6 +114,19 @@ export async function POST(req: NextRequest) {
   }
 
   const { meter_id, kwh, timestamp, signature_hex } = parsed.data
+
+  // Validate API key — must match the meter being claimed
+  const apiKeyHeader = req.headers.get('x-meter-api-key')
+  if (!apiKeyHeader) {
+    log.warn('readings.post.missing_api_key', { meter_id })
+    return NextResponse.json({ error: 'Missing X-Meter-Api-Key header' }, { status: 401 })
+  }
+  const keyRecord = await validateApiKey(apiKeyHeader)
+  if (!keyRecord || keyRecord.meter_id !== meter_id) {
+    log.warn('readings.post.invalid_api_key', { meter_id })
+    return NextResponse.json({ error: 'Invalid or revoked API key' }, { status: 401 })
+  }
+
   const limit = Number(process.env.READINGS_RATE_LIMIT_PER_MINUTE ?? 60)
   const windowSeconds = Number(process.env.READINGS_RATE_LIMIT_WINDOW_SECONDS ?? 60)
   const rateKey = `rate:readings:${meter_id}`
