@@ -11,6 +11,7 @@ import { logger } from '@/lib/logger'
 import { requireAuth, isAuthError } from '@/lib/auth'
 import { diagnoseMintFailure } from '@/lib/tracer-sim'
 import { validateApiKey } from '@/lib/meter-api-keys'
+import { sendNotification } from '@/lib/email'
 
 const MAX_PAGE_SIZE = 100
 
@@ -273,6 +274,7 @@ export async function POST(req: NextRequest) {
 
     log.info('readings.post.minted', { reading_id: reading.id, mint_tx_hash: mintTxHash, kwh })
     void fireWebhook(meter.cooperative_id, 'mint', { reading_id: reading.id, mint_tx_hash: mintTxHash, kwh })
+    void sendNotification({ cooperative_id: meter.cooperative_id, event: 'minted', data: { reading_id: reading.id, mint_tx_hash: mintTxHash, kwh } })
 
     const responseBody = { reading_id: reading.id, anchor_tx_hash: anchorTxHash, mint_tx_hash: mintTxHash }
     if (idempotencyKey) {
@@ -283,6 +285,7 @@ export async function POST(req: NextRequest) {
     const message = err instanceof Error ? err.message : 'Mint failed'
     log.error('readings.post.mint_failed', { reading_id: reading.id, error: message })
     const diagnosis = await diagnoseMintFailure(reading.id, meter.cooperative_id, message)
+    void sendNotification({ cooperative_id: meter.cooperative_id, event: 'mint_failed', data: { reading_id: reading.id, error: message } })
     return NextResponse.json({ error: message, reading_id: reading.id, anchor_tx_hash: anchorTxHash, diagnosis }, { status: 500 })
   }
 }

@@ -14,6 +14,9 @@ export const env = createEnv({
     // Fallback for local dev only — ignored when MINTER_SECRET_ARN is set
     MINTER_SECRET_KEY: z.string().min(56).optional(),
     AWS_REGION: z.string().default('us-east-1'),
+    // Email notifications (Resend)
+    RESEND_API_KEY: z.string().min(1).optional(),
+    EMAIL_FROM: z.string().optional(),
   },
   client: {
     NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
@@ -40,5 +43,7 @@ export const env = createEnv({
     NEXT_PUBLIC_COMMUNITY_GOVERNANCE_ID: process.env.NEXT_PUBLIC_COMMUNITY_GOVERNANCE_ID,
     READINGS_RATE_LIMIT_PER_MINUTE: process.env.READINGS_RATE_LIMIT_PER_MINUTE,
     READINGS_RATE_LIMIT_WINDOW_SECONDS: process.env.READINGS_RATE_LIMIT_WINDOW_SECONDS,
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
+    EMAIL_FROM: process.env.EMAIL_FROM,
   },
 })
